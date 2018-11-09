@@ -1,7 +1,9 @@
-var express = require('express');
-var app = express();
-var bodyParser = require('body-parser');
-
+const express = require('express');
+const app = express();
+const bodyParser = require('body-parser');
+const Joi = require('joi');
+var moment = require('moment');
+const functions = require('./modules/module');
 
 // Middleware
 app.use(bodyParser.json());
@@ -10,24 +12,11 @@ app.use(bodyParser.urlencoded({ extended: false }))
 
 //Fake DB in memory
 
-bookings = [
-  {
-    _id: 1,
-    booked_by: "Anna",
-    booking_date: new Date(),
-    booked_from: new Date("2018-11-30T14:29Z"),
-    booked_to: new Date("2018-12-06T14:29Z"),
-    booked_dates: [
-      new Date("2018-11-30T14:29Z"),
-      new Date("2018-12-01T14:29Z"),
-      new Date("2018-12-02T14:29Z"),
-      new Date("2018-12-03T14:29Z"),
-      new Date("2018-12-04T14:29Z"),
-      new Date("2018-12-05T14:29Z"),
-      new Date("2018-12-06T14:29Z")
-    ]
-  }
-];
+let bookings = [];
+
+app.get('/api/test', (req, res) => {
+  res.json(one_year_forward);
+});
 
 app.get('/api/bookings', (req, res) => {
   res.json(bookings);
@@ -48,6 +37,56 @@ app.get('/api/bookings/:id', (req, res) => {
 
 app.post('/api/bookings', (req, res) => {
 
+  const data = req.body;
+  console.log(req.get("X-Token"));
+
+  const booked_dates = functions.getDates(new Date(data.start_date), new Date(data.end_date));
+
+  const schema = Joi.object().keys({
+    _id: Joi.string(),
+    name: Joi.string().required(),
+    email: Joi.string().email().required(),
+    persons: Joi.number().integer().required(),
+    booking_date: Joi.object().required(),
+    start_date: Joi.string().required(),
+    end_date: Joi.string().required(),
+    booked_dates: Joi.array().required(),
+    confirmed: Joi.boolean().default(false),
+    payed: Joi.boolean().default(false)
+  });
+
+
+  const newBooking = {
+    _id: "booking_" + (bookings.length + 1),
+    name: data.name,
+    email: data.email,
+    persons: parseInt(data.persons),
+    booking_date: new Date(),
+    start_date: data.start_date,
+    end_date: data.end_date,
+    booked_dates: booked_dates,
+    confirmed: false,
+    payed: false
+  }
+
+  Joi.validate(newBooking, schema, (err, value) => {
+    if (err) {
+      return res.status(400).json({
+        status: "error",
+        message: "Validation error",
+        error: err
+      });
+    }
+    else {
+      // TODO Make insert to mongoDB instead of bushing to array later
+      bookings.push(newBooking);
+      res.json({
+        status: "Success",
+        message: "New booking created",
+        data: newBooking
+      });
+    }
+  })
 });
 
 
