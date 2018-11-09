@@ -14,10 +14,6 @@ app.use(bodyParser.urlencoded({ extended: false }))
 
 let bookings = [];
 
-app.get('/api/test', (req, res) => {
-  res.json(one_year_forward);
-});
-
 app.get('/api/bookings', (req, res) => {
   res.json(bookings);
 });
